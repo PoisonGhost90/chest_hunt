@@ -215,12 +215,24 @@ class CH:
             case CHType.LOOT:
                 return self._chance_loot()
             case CHType.MIMIC:
-                return self.mimics / self.chests
+                return self._chance_mimic()
             case CHType.SAVER:
                 return self.savers / self.chests
             case CHType.DOUBLER:
-                doublers = 1 if self.doublers > 0 else 0
-                return doublers / self.chests
+                return self._chance_doubler()
+
+    def _chance_doubler(self):
+        # AD allows us to avoid savers
+        chests = self.chests - (self.savers if self.ad else 0)
+
+        doublers = 1 if self.doublers > 0 else 0
+        return doublers / chests
+
+    def _chance_mimic(self):
+        # AD allows us to avoid savers
+        chests = self.chests - (self.savers if self.ad else 0)
+
+        return self.mimics / chests
 
     def _chance_loot(self):
         # AD allows us to avoid savers
