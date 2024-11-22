@@ -19,7 +19,8 @@ _DecimalNew: TypeAlias = Decimal | float | str | tuple[int, Sequence[int], int]
 
 MAKE_CSV = True
 SIG_FIGS = 4
-ARMORY_RATE = 0.005
+ARMORY_RATE = Decimal(0.005)
+KILLER_RATE = Decimal(0.01)
 
 
 ### Utility Functions
@@ -57,7 +58,8 @@ class CH:
         doubles: int = 0,
         dd: bool = False,
         perfect: bool = False,
-        armory: bool = True,
+        armory: bool = False,
+        killer: bool = False,
     ):
         # 2 doublers means x2 x2
         if doublers > 1:
@@ -86,6 +88,8 @@ class CH:
         self.perfect = perfect
         # has armory chests
         self.armory = armory
+        # has ninja gloves
+        self.killer = killer
 
         # chase x2 saver
         self.chase = perfect
@@ -106,6 +110,7 @@ class CH:
             self.perfect,
             self.chase,
             self.armory,
+            self.killer,
         ) == (
             other.chests,
             other.mimics,
@@ -119,6 +124,7 @@ class CH:
             other.perfect,
             other.chase,
             other.armory,
+            other.killer,
         )
 
     def __hash__(self):
@@ -136,6 +142,7 @@ class CH:
                 self.perfect,
                 self.chase,
                 self.armory,
+                self.killer,
             )
         )
 
@@ -153,6 +160,7 @@ class CH:
             dd=self.dd,
             perfect=self.perfect,
             armory=self.armory,
+            killer=self.killer,
         )
         ch.chase = self.chase
         return ch
@@ -315,10 +323,17 @@ def calculate_value(ch: CH) -> CHValue:
         )
 
     ## Mimic
-    if ch.mimics > 0 and (ch.saves > 0 or ch.csaves > 0):
-        value += ch.chance(CHType.MIMIC) * calculate_value(
-            ch.next(CHType.MIMIC)
-        )
+    if ch.mimics > 0:
+        if ch.saves > 0 or ch.csaves > 0:
+            value += ch.chance(CHType.MIMIC) * calculate_value(
+                ch.next(CHType.MIMIC)
+            )
+        elif ch.killer:
+            value += (
+                ch.chance(CHType.MIMIC)
+                * KILLER_RATE
+                * calculate_value(ch.next(CHType.MIMIC))
+            )
 
     ## Loot
     gain = 2 if ch.doubles > 0 else 1
@@ -339,6 +354,7 @@ def make_csv():
     config_doubler = [0, 1, 2]
     config_perfect = [0, 1]
     config_armory = [0, 1]
+    config_killer = [0, 1]
 
     with open("chest_hunt.csv", "w", newline="") as outfile:
         out = csvwriter(outfile)
@@ -355,10 +371,12 @@ def make_csv():
                 "x2 x2",
                 "Ad Saver",
                 "Want Perfect",
+                "Ninja Gloves (Killer)",
             ]
         )
 
         for config in product(
+            config_killer,
             config_perfect,
             config_ad,
             config_doubler,
@@ -366,12 +384,13 @@ def make_csv():
             config_saver,
             config_armory,
         ):
-            p = config[0]
-            ad = config[1]
-            d = config[2]
-            cs = config[3]
-            s = config[4]
-            a = config[5]
+            k = config[0]
+            p = config[1]
+            ad = config[2]
+            d = config[3]
+            cs = config[4]
+            s = config[5]
+            a = config[6]
 
             # Pointless / Impossible
             if ad > 0 and s < 1:
@@ -386,6 +405,7 @@ def make_csv():
                 doublers=d,
                 perfect=p > 0,
                 armory=a > 0,
+                killer=k > 0,
             )
 
             value = calculate_value(ch)
@@ -404,6 +424,7 @@ def make_csv():
                     d > 1,
                     ad > 0,
                     p > 0,
+                    k > 0,
                     value.loot,
                     value.perfect,
                     value.armory,
@@ -412,7 +433,9 @@ def make_csv():
 
 
 if __name__ == "__main__":
-    ch = CH(savers=1, csaves=2, doublers=1, perfect=True, armory=True)
+    ch = CH(
+        savers=1, csaves=2, doublers=1, perfect=True, armory=True, killer=False
+    )
     ch_ad = ch.copy()
     ch_ad.ad = True
 
