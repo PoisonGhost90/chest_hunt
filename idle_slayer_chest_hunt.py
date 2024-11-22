@@ -249,26 +249,23 @@ class CHValue:
         self,
         loot: _DecimalNew = 0,
         perfect: _DecimalNew = 0,
-        armory: _DecimalNew = 0,
     ):
         self.loot = Decimal(loot)
         self.perfect = Decimal(perfect)
-        self.armory = Decimal(armory)
 
     def __str__(self):
-        return f"({self.loot}, {self.perfect}, {self.armory})"
+        return f"({self.loot}, {self.perfect})"
 
     def __add__(self, other: CHValue):
         return CHValue(
             self.loot + other.loot,
             self.perfect + other.perfect,
-            self.armory + other.armory,
         )
 
     def __mul__(self, other: _DecimalNew):
         other = Decimal(other)
         return CHValue(
-            self.loot * other, self.perfect * other, self.armory * other
+            self.loot * other, self.perfect * other
         )
 
     def __rmul__(self, other: _DecimalNew):
@@ -349,7 +346,6 @@ def make_csv():
         out = csvwriter(outfile)
         out.writerow(
             [
-                "Average Loot Gains",
                 "Average Loot Chests",
                 "Perfect Hunt Rate",
                 "Armory Chest",
@@ -361,10 +357,13 @@ def make_csv():
                 "Ad Saver",
                 "Want Perfect",
                 "Ninja Gloves (Killer)",
+                "Average Loot Chests",
+                "Perfect Hunt Rate",
+                "Average Loot Gains",
             ]
         )
 
-        i = 0
+        # i = 0
         for config in product(
             config_killer,
             config_perfect,
@@ -386,7 +385,7 @@ def make_csv():
             if p > 0 and (ad < 1 or d != 1):
                 continue  # need ad and double saver for perfect strategy
 
-            i += 1
+            # i += 1
 
             ch = CH(
                 savers=s,
@@ -402,7 +401,6 @@ def make_csv():
 
             out.writerow(
                 [
-                    format(lootp, SIG_FIGS),
                     format(value.loot, SIG_FIGS),
                     format(value.perfect, SIG_FIGS),
                     s > 0,
@@ -413,13 +411,12 @@ def make_csv():
                     ad > 0,
                     p > 0,
                     k > 0,
-                    lootp,
                     value.loot,
-                    value.armory,
                     value.perfect,
+                    lootp,
                 ]
             )
-        print(i)
+        # print(i)
 
 
 if __name__ == "__main__":
@@ -444,11 +441,10 @@ if __name__ == "__main__":
     perfect_p = format(value.perfect * 100, SIG_FIGS)
     perfect_ad_p = format(value_ad.perfect * 100, SIG_FIGS)
 
-    print(f"Average Loot Gains: {lootp_p} | {lootp_ad_p}")
     print(f"Average Loot Chests: {loot_p} | {loot_ad_p}")
     print(f"Perfect Hunt Rate: {perfect_p}% | {perfect_ad_p}%")
-    print(f"{value}")
-    print(f"{value_ad}")
+    print(f"No Ad: {value}")
+    print(f"   Ad: {value_ad}")
 
     if MAKE_CSV:
         make_csv()
