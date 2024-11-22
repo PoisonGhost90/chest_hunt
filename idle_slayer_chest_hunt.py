@@ -264,9 +264,7 @@ class CHValue:
 
     def __mul__(self, other: _DecimalNew):
         other = Decimal(other)
-        return CHValue(
-            self.loot * other, self.perfect * other
-        )
+        return CHValue(self.loot * other, self.perfect * other)
 
     def __rmul__(self, other: _DecimalNew):
         return self.__mul__(other)
@@ -348,7 +346,6 @@ def make_csv():
             [
                 "Average Loot Chests",
                 "Perfect Hunt Rate",
-                "Armory Chest",
                 "Saver",
                 "Crystal Saver",
                 "Reinforced Crystal Saver",
