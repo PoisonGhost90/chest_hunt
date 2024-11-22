@@ -19,7 +19,6 @@ _DecimalNew: TypeAlias = Decimal | float | str | tuple[int, Sequence[int], int]
 
 MAKE_CSV = True
 SIG_FIGS = 4
-ARMORY_RATE = Decimal(0.005)
 KILLER_RATE = Decimal(0.01)
 
 
@@ -58,7 +57,6 @@ class CH:
         doubles: int = 0,
         dd: bool = False,
         perfect: bool = False,
-        armory: bool = False,
         killer: bool = False,
     ):
         # 2 doublers means x2 x2
@@ -86,8 +84,6 @@ class CH:
         self.dd = dd
         # want perfect hunt
         self.perfect = perfect
-        # has armory chests
-        self.armory = armory
         # has ninja gloves
         self.killer = killer
 
@@ -109,7 +105,6 @@ class CH:
             self.dd,
             self.perfect,
             self.chase,
-            self.armory,
             self.killer,
         ) == (
             other.chests,
@@ -123,7 +118,6 @@ class CH:
             other.dd,
             other.perfect,
             other.chase,
-            other.armory,
             other.killer,
         )
 
@@ -141,7 +135,6 @@ class CH:
                 self.dd,
                 self.perfect,
                 self.chase,
-                self.armory,
                 self.killer,
             )
         )
@@ -159,7 +152,6 @@ class CH:
             doubles=self.doubles,
             dd=self.dd,
             perfect=self.perfect,
-            armory=self.armory,
             killer=self.killer,
         )
         ch.chase = self.chase
@@ -336,10 +328,8 @@ def calculate_value(ch: CH) -> CHValue:
             )
 
     ## Loot
-    gain = 2 if ch.doubles > 0 else 1
-    armory = ARMORY_RATE if ch.armory else 0
-    loot = 1 - armory
-    value += ch.chance(CHType.LOOT) * gain * CHValue(loot=loot, armory=armory)
+    loot = 2 if ch.doubles > 0 else 1
+    value += ch.chance(CHType.LOOT) * CHValue(loot=loot)
     value += ch.chance(CHType.LOOT) * calculate_value(ch.next(CHType.LOOT))
 
     # Add the current value as a solved state
@@ -353,16 +343,15 @@ def make_csv():
     config_csaver = [0, 1, 2]
     config_doubler = [0, 1, 2]
     config_perfect = [0, 1]
-    config_armory = [0, 1]
     config_killer = [0, 1]
 
     with open("chest_hunt.csv", "w", newline="") as outfile:
         out = csvwriter(outfile)
         out.writerow(
             [
+                "Average Loot Gains",
                 "Average Loot Chests",
                 "Perfect Hunt Rate",
-                "Average Armory Chests",
                 "Armory Chest",
                 "Saver",
                 "Crystal Saver",
@@ -375,6 +364,7 @@ def make_csv():
             ]
         )
 
+        i = 0
         for config in product(
             config_killer,
             config_perfect,
@@ -382,7 +372,6 @@ def make_csv():
             config_doubler,
             config_csaver,
             config_saver,
-            config_armory,
         ):
             k = config[0]
             p = config[1]
@@ -390,7 +379,6 @@ def make_csv():
             d = config[3]
             cs = config[4]
             s = config[5]
-            a = config[6]
 
             # Pointless / Impossible
             if ad > 0 and s < 1:
@@ -398,25 +386,25 @@ def make_csv():
             if p > 0 and (ad < 1 or d != 1):
                 continue  # need ad and double saver for perfect strategy
 
+            i += 1
+
             ch = CH(
                 savers=s,
                 ad=ad > 0,
                 csaves=cs,
                 doublers=d,
                 perfect=p > 0,
-                armory=a > 0,
                 killer=k > 0,
             )
 
             value = calculate_value(ch)
-            value.loot += 3 * value.perfect * value.loot
+            lootp = value.loot * (1 + 3 * value.perfect)
 
             out.writerow(
                 [
+                    format(lootp, SIG_FIGS),
                     format(value.loot, SIG_FIGS),
-                    format(value.perfect * 100, SIG_FIGS),
-                    format(value.armory, SIG_FIGS),
-                    a > 0,
+                    format(value.perfect, SIG_FIGS),
                     s > 0,
                     cs > 0,
                     cs > 1,
@@ -425,17 +413,17 @@ def make_csv():
                     ad > 0,
                     p > 0,
                     k > 0,
+                    lootp,
                     value.loot,
-                    value.perfect,
                     value.armory,
+                    value.perfect,
                 ]
             )
+        print(i)
 
 
 if __name__ == "__main__":
-    ch = CH(
-        savers=1, csaves=2, doublers=1, perfect=True, armory=True, killer=False
-    )
+    ch = CH(savers=1, csaves=2, doublers=1, perfect=True, killer=False)
     ch_ad = ch.copy()
     ch_ad.ad = True
 
@@ -444,8 +432,11 @@ if __name__ == "__main__":
 
     # perfect hunts give an average of x3 gains
     # (after upgrades are finished)
-    value.loot += 3 * value.perfect * value.loot
-    value_ad.loot += 3 * value_ad.perfect * value_ad.loot
+    lootp = value.loot * (1 + 3 * value.perfect)
+    lootp_ad = value_ad.loot * (1 + 3 * value_ad.perfect)
+
+    lootp_p = format(lootp, SIG_FIGS)
+    lootp_ad_p = format(lootp_ad, SIG_FIGS)
 
     loot_p = format(value.loot, SIG_FIGS)
     loot_ad_p = format(value_ad.loot, SIG_FIGS)
@@ -453,12 +444,9 @@ if __name__ == "__main__":
     perfect_p = format(value.perfect * 100, SIG_FIGS)
     perfect_ad_p = format(value_ad.perfect * 100, SIG_FIGS)
 
-    armory_p = format(value.armory, SIG_FIGS)
-    armory_ad_p = format(value_ad.armory, SIG_FIGS)
-
+    print(f"Average Loot Gains: {lootp_p} | {lootp_ad_p}")
     print(f"Average Loot Chests: {loot_p} | {loot_ad_p}")
     print(f"Perfect Hunt Rate: {perfect_p}% | {perfect_ad_p}%")
-    print(f"Average Armory Chests: {armory_p} | {armory_ad_p}")
     print(f"{value}")
     print(f"{value_ad}")
 
